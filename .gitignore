@@ -1,0 +1,8 @@
+node_modules/
+.next/
+__pycache__/
+*.db
+*.csv
+*.joblib
+*.pt
+.env
