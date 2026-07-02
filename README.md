@@ -103,21 +103,36 @@
 | ConfirmPanel | 操作二次确认 |
 | Sidebar | 导航侧栏 |
 
-## 快速开始
+## 环境部署
+
+### 环境要求
+- Python ≥ 3.10
+- Node.js ≥ 18
+- SQLite（系统自带）
+
+### 安装与启动
 
 ```bash
-# 安装依赖
+# 1. 克隆仓库
+git clone https://github.com/eternalxian/quant-trading.git
+cd quant-trading
+
+# 2. 安装 Python 依赖
 pip install -r requirements.txt
 
-# 初始化数据库
+# 3. 初始化数据库
 python db.py
 
-# 启动后端
+# 4. 启动后端（端口 8080）
 python main.py
 
-# 启动前端（新终端）
-cd terminal && npm install && npm run dev
+# 5. 启动前端（新终端，端口 3000）
+cd terminal
+npm install
+npm run dev
 ```
+
+浏览器打开 `http://localhost:3000` 进入交易终端。
 
 ## 项目统计
 
