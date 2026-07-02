@@ -1,0 +1,70 @@
+@import "tailwindcss";
+
+@theme inline {
+  --color-background: #020617;
+  --color-foreground: #E2E8F0;
+  --color-card: rgba(15, 23, 42, 0.72);
+  --color-card-border: rgba(59, 130, 246, 0.15);
+  --color-primary: #3B82F6;
+  --color-primary-glow: rgba(59, 130, 246, 0.35);
+  --color-profit: #22C55E;
+  --color-loss: #EF4444;
+  --color-muted: #94A3B8;
+  --color-surface: #081225;
+  --font-mono: "JetBrains Mono", "Fira Code", monospace;
+}
+
+:root {
+  --background: #020617;
+  --foreground: #E2E8F0;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(59, 130, 246, 0.2) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background: rgba(59, 130, 246, 0.2);
+  border-radius: 2px;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: "Inter", system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+
+@layer base {
+  .glass {
+    background: rgba(15, 23, 42, 0.72);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(59, 130, 246, 0.12);
+  }
+  .glass-strong {
+    background: rgba(15, 23, 42, 0.88);
+    backdrop-filter: blur(24px);
+    border: 1px solid rgba(59, 130, 246, 0.18);
+  }
+  .neon-border {
+    border: 1px solid rgba(59, 130, 246, 0.35);
+    box-shadow: 0 0 12px rgba(59, 130, 246, 0.12), inset 0 0 12px rgba(59, 130, 246, 0.04);
+  }
+  .glow-blue {
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.15), 0 0 40px rgba(59, 130, 246, 0.05);
+  }
+  .glow-green {
+    box-shadow: 0 0 16px rgba(34, 197, 94, 0.15);
+  }
+  .text-profit { color: #22C55E; }
+  .text-loss { color: #EF4444; }
+}
