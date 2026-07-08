@@ -1,6 +1,6 @@
 # 组合模拟口径说明（P4-1）
 
-状态：`P4-1-candidate`  
+状态：`P4-1-candidate`
 稳定基线：`v3.5.1-stable`
 
 ## 定位
