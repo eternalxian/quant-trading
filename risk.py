@@ -8,7 +8,7 @@ import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
 from typing import Optional
-from data import get_fund_nav, get_all_funds_nav
+from data import AKSHARE_LOCK, get_fund_nav, get_all_funds_nav
 from config import FUNDS
 from portfolio import HOLDINGS, COST_BASIS, CASH_YUEBAO
 
@@ -26,7 +26,8 @@ def get_benchmark_returns(days: int = 250) -> pd.Series:
     """
     import akshare as ak
     try:
-        df = ak.stock_zh_index_daily(symbol="sh000300")
+        with AKSHARE_LOCK:
+            df = ak.stock_zh_index_daily(symbol="sh000300")
         if df is not None and not df.empty:
             df = df.tail(days + 1).copy()
             df["date"] = pd.to_datetime(df["date"])
@@ -202,7 +203,7 @@ def calc_calmar(daily_returns: pd.Series) -> float:
     if max_dd is None or max_dd == 0:
         return None
 
-    return round(ann_return / abs(max_dd) * 100, 2)
+    return round(ann_return / abs(max_dd), 2)
 
 
 def calc_var(daily_returns: pd.Series, alpha: float = 0.05) -> float:

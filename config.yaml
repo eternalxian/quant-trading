@@ -1,0 +1,94 @@
+# AI Quant Terminal — 主配置文件
+# 优先级: 环境变量 QUANT_* > config.yaml > config.py 默认值
+
+funds:
+  "014319": { name: "德邦半导体产业混合A", type: "A_stock" }
+  "017641": { name: "摩根标普500指数A", type: "QDII" }
+  "270042": { name: "广发纳斯达克100ETF联接A", type: "QDII" }
+  "012920": { name: "易方达全球成长精选混合A", type: "QDII" }
+  "005698": { name: "华夏全球科技先锋混合A", type: "QDII" }
+  "000834": { name: "大成纳斯达克100ETF联接A", type: "QDII" }
+
+strategy:
+  momentum_days: 20
+  ma_short: 5
+  ma_long: 20
+
+dca_schedule: {}
+
+etf_watchlist:
+  "513100": "纳指ETF"
+  "512480": "半导体ETF"
+  "515050": "通信ETF"
+  "159611": "电力ETF"
+  "513500": "标普500ETF"
+  "515070": "人工智能ETF"
+
+rotation_etf_codes:
+  "513100": "纳指ETF"
+  "513500": "标普500ETF"
+  "512480": "半导体ETF"
+  "515050": "通信ETF"
+  "515070": "人工智能ETF"
+  "159611": "电力ETF"
+
+stock_watchlist:
+  "601985": "中国核电"
+  "600905": "三峡能源"
+  "600903": "贵州燃气"
+  "601991": "大唐发电"
+  "600589": "大卫科技"
+  "600886": "国投电力"
+  "600795": "国电电力"
+  "003816": "中国广核"
+  "600157": "永泰能源"
+  "600452": "涪陵电力"
+  "601016": "节能风电"
+  "601778": "晶科科技"
+  "000591": "太阳能"
+  "600011": "华能国际"
+  "600674": "川投能源"
+  "000690": "宝新能源"
+  "600930": "华电新能"
+  "002195": "岩山科技"
+  "300088": "长信科技"
+  "002456": "欧菲光"
+  "002065": "东华软件"
+  "000725": "京东方A"
+  "002681": "奋达科技"
+
+signal_config:
+  score_window: 25
+  rebalance_freq: 20
+  momentum_threshold: 0.02
+  max_position_pct: 0.30
+
+stock_trading:
+  max_risk_per_trade: 0.02
+  max_position_pct: 0.30
+  max_total_positions: 5
+  default_stop_atr_mult: 2.0
+  min_risk_reward: 2.0
+  max_daily_loss_pct: 0.05
+  commission: 0.0003
+  stamp_tax_sell: 0.001
+  slippage: 0.001
+  default_capital: 4000
+
+risk_rules:
+  concentration:
+    warning: 50
+    critical: 70
+    target_max: 40
+  drawdown:
+    warning: -10
+    critical: -20
+  volatility:
+    warning: 30
+    critical: 45
+  stale_nav:
+    warning_days: 3
+    critical_days: 5
+  consecutive_down:
+    warning_days: 3
+    critical_days: 5

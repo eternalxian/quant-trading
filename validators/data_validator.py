@@ -118,3 +118,36 @@ def validate_holdings(portfolio: dict) -> QualityReport:
     report.quality = max(0, report.quality)
     report.details = "; ".join(issues) if issues else "持仓数据正常"
     return report
+
+
+def check_nav_freshness() -> dict:
+    """检查所有持仓基金净值新鲜度
+
+    Returns:
+        {code: {"name": str, "last_date": str, "days_ago": int, "stale": bool, "max_days": int}}
+    """
+    from config import FUNDS
+    from data import get_fund_nav
+    from datetime import datetime
+
+    result = {}
+    for code, info in FUNDS.items():
+        fund_type = info.get("type", "")
+        max_days = 2 if fund_type == "QDII" else 1
+        try:
+            df = get_fund_nav(code, days=5)
+            if df is not None and not df.empty:
+                last_date = df["净值日期"].iloc[-1]
+                if hasattr(last_date, "strftime"):
+                    last_str = last_date.strftime("%Y-%m-%d")
+                else:
+                    last_str = str(last_date)[:10]
+                days_ago = (datetime.now() - datetime.strptime(last_str, "%Y-%m-%d")).days
+                result[code] = {
+                    "name": info["name"], "last_date": last_str,
+                    "days_ago": days_ago, "stale": days_ago > max_days,
+                    "max_days": max_days, "type": fund_type,
+                }
+        except Exception:
+            result[code] = {"name": info["name"], "last_date": "N/A", "days_ago": 999, "stale": True, "max_days": max_days, "type": fund_type}
+    return result

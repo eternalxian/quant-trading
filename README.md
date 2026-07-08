@@ -1,163 +1,70 @@
-# 量化交易系统
+# 基金组合分析与决策辅助系统
 
-> Python + Next.js 全栈量化交易平台 · 20+ 策略信号 · ML 增强 · Web 实时监控
+一个用于个人基金组合监控、风险分析、策略建议与每日复盘的 AI 协作项目。当前稳定基线为 `v3.5.1-stable`，另包含尚未接入 API/前端的 `P4-1` 目标仓位模拟模块。
 
----
+> 本仓库只包含源码、公开行情缓存和合成演示数据，不包含真实持仓、交易、资产金额、日志、备份或密钥。系统不构成投资建议，也不提供自动实盘交易或收益承诺。
 
-## 系统架构
+## 已实现能力
 
-```
-                        ┌─────────────────┐
-                        │   Web 终端 (Next.js)  │
-                        │  K线 · 资产 · AI分析   │
-                        └────────┬────────┘
-                                 │ WebSocket
-              ┌──────────────────┼──────────────────┐
-              │                  │                  │
-        策略引擎            风控引擎            执行层
-    ┌─────┴─────┐      ┌─────┴─────┐      ┌─────┴─────┐
-    │ 轮动策略    │      │ 熔断机制    │      │ 订单管理    │
-    │ 投票集成    │      │ 规则校验    │      │ 持仓跟踪    │
-    │ 动态权重    │      │ 风险敞口    │      │ 交易日志    │
-    └─────┬─────┘      └─────┬─────┘      └───────────┘
-          │                  │
-          └────────┬─────────┘
-                   ↓
-            信号采集层
-    ┌──────────────┼──────────────┐
-    │              │              │
-  技术指标       ML 模型        资金流
-    │              │              │
-  MACD/RSI    LightGBM        SmartMoney
-  Bollinger   CatBoost        QRS
-  MA/KDJ      LSTM            VolumeDist
-  Alligator   TFT              MoneyFlow
-  Donchian    EnsembleVoting
-  RSRS
-```
+- Next.js 前端 + FastAPI 服务，当前代码包含 40 个 HTTP 接口与 1 个 WebSocket 实时通道。
+- 生产、分析、参考三库隔离，分别承载资产记录、分析结果与外部参考数据。
+- 组合收益、年化波动率、Sharpe、Calmar、VaR 95/99、Beta/Alpha、最大回撤、基准比较和归因分析。
+- 风险预警、策略建议、人工确认、历史状态、每日复盘和报告导出的决策辅助闭环。
+- 30 秒缓存、单航班刷新、陈旧缓存可用和数据源降级，降低并发刷新对服务的影响。
+- P4-1 目标权重只读模拟：目标金额、调仓差额、单边换手率、最大权重、HHI 集中度和资产守恒校验。
 
-## 技术栈
+## 项目边界
 
-| 层 | 技术 | 说明 |
-|---|------|------|
-| 后端 | Python | 数据采集、策略计算、风控、订单管理 |
-| 数据库 | SQLite | 本地持久化，股票/ETF/基金/信号历史 |
-| ML | LightGBM · CatBoost · LSTM | 已训练模型文件，用于信号评分 |
-| 前端 | Next.js · TypeScript | SPA，WebSocket 实时推送 |
-| 终端 | Recharts · WebSocket | K线图表、资产面板、AI 分析、策略健康 |
+- 当前不是自动交易平台，不会连接券商下单。
+- 当前没有完整策略引擎、完整回测引擎、费用/滑点模型或多用户权限。
+- AI仅用于解释和补充分析视角，风险规则和金额计算采用确定性逻辑。
+- P4-1 目前是独立纯计算模块，尚未接入 API、数据库写入或前端界面。
 
-## 核心模块
+## 脱敏说明
 
-### 信号采集 (`signals/` · 25 个模块)
+公开版主动排除了：
 
-| 类别 | 策略 | 说明 |
-|------|------|------|
-| 趋势跟踪 | MACD, MA Cross, Alligator | 多周期趋势识别 |
-| 超买超卖 | RSI, KDJ, Bollinger | 反转信号 |
-| 突破 | Donchian, RSRS | 支撑阻力突破 |
-| ML 评分 | LightGBM Scorer, CatBoost Scorer | 模型预测评分 |
-| 深度学习 | LSTM Forecast, TFT Forecast | 时序预测 |
-| 资金流 | Smart Money, Money Flow, QRS | 主力资金跟踪 |
-| 轮动 | Rotation, Rotation Classic, Rotation LS | 板块/风格轮动 |
-| 集成 | Ensemble Voting | 多信号投票融合 |
+- `production.db`、`analytics.db`、`reference.db` 及任何备份；
+- 真实持仓、份额、成本、现金、交易与确认记录；
+- 运行日志、调试证据、研究过程目录和本机构建缓存；
+- API 密钥、Token、个人账号及本机路径。
 
-### 策略引擎 (`strategy/`)
+如需演示，请先运行 `python scripts/init_demo_data.py`，该脚本只生成明确标记的合成数据。
 
-- **Engine** — 核心策略引擎，信号→决策
-- **ETF Engine** — 专门优化的 ETF 策略执行
-- **Optimizer** — 策略参数优化器
-- **Health** — 策略运行健康检查
+## 快速开始
 
-### 风控引擎 (`risk_engine/`)
-
-- **Circuit Breaker** — 多级熔断（单日跌幅/连续亏损/波动率）
-- **Rules** — 可配置风控规则（仓位上限/行业集中度/流动性门槛）
-
-### 运行时 (`runtime/`)
-
-- **Market Clock** — A 股交易时间管理
-- **Runtime Loop** — 主循环：采集→信号→决策→执行
-- **State Checker** — 系统状态检查与告警
-- **Recovery** — 异常恢复机制
-
-### AI 分析 (`agents/`)
-
-- **Macro Agent** — 宏观面分析
-- **Sentiment Agent** — 市场情绪分析
-- **Stock Agent** — 个股深度分析
-
-### Web 终端 (`terminal/` · 22 个组件)
-
-| 组件 | 功能 |
-|------|------|
-| KLineChart | 交互式 K 线图 |
-| AssetOverview | 资产总览面板 |
-| AIAnalysis | AI 分析面板 |
-| PortfolioTable | 持仓明细表 |
-| TradePanel | 交易操作面板 |
-| StatusBar | 系统运行状态 |
-| StrategyHealth | 策略健康评分 |
-| OptimizerPage | 参数优化界面 |
-| DailyReport | 日度报告 |
-| FundRealtime | 基金实时估值 |
-| ConfirmPanel | 操作二次确认 |
-| Sidebar | 导航侧栏 |
-
-## 环境部署
-
-### 环境要求
-- Python ≥ 3.10
-- Node.js ≥ 18
-- SQLite（系统自带）
-
-### 安装与启动
-
-```bash
-# 1. 克隆仓库
-git clone https://github.com/eternalxian/quant-trading.git
-cd quant-trading
-
-# 2. 安装 Python 依赖
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
-
-# 3. 初始化数据库
-python db.py
-
-# 4. 启动后端（端口 8000）
-python main.py
-
-# 5. 启动前端（新终端，端口 3000）
+python scripts\init_demo_data.py
 cd terminal
 npm install
+npm run build
+cd ..
+python -m uvicorn server:app --host 127.0.0.1 --port 8000
+```
+
+另开终端运行前端：
+
+```powershell
+cd terminal
 npm run dev
 ```
 
-浏览器打开 `http://localhost:3000` 进入交易终端。
+后端健康检查：`http://127.0.0.1:8000/api/health`
 
-## 项目统计
+## 验证
 
-| 指标 | 数据 |
-|------|------|
-| 总代码文件 | 94 |
-| 策略信号 | 20+ |
-| 前端组件 | 16 |
-| ML 模型 | 3（LightGBM/CatBoost/LSTM） |
-| 数据覆盖 | 40+ 股票/ETF/基金 |
+```powershell
+python -m unittest tests.test_simulation -v
+python tests\test_system.py
+cd terminal
+npm run build
+```
 
-## 技术特性
+- 19 项仓位模拟单元测试覆盖输入边界、金额舍入、换手率、集中度和资产守恒。
+- 内部稳定基线完成 22 项系统验证，覆盖 HTTP、写入闭环、双 WebSocket、并发、缓存发布和降级路径。
 
-- **ML 增强信号**：LightGBM/CatBoost 评分 + LSTM/TFT 时序预测
-- **集成投票机制**：多信号融合决策，降低单一策略噪声
-- **多级风控**：熔断 + 仓位上限 + 行业集中度 + 流动性门槛
-- **实时 Web 终端**：WebSocket 推送，无需刷新
-- **AI 分析面板**：大模型驱动的市场/个股分析
+更多说明见 [`docs/CAPABILITY_MATRIX.md`](docs/CAPABILITY_MATRIX.md) 与 [`docs/SIMULATION.md`](docs/SIMULATION.md)。
 
-## 安全注意
-
-- 后端默认允许跨域访问（开发模式）。部署前应限制 `allow_origins` 为前端地址
-- 生产环境需添加接口鉴权（API Key / JWT）
-- 数据库文件中不得包含真实持仓和交易记录
-
-## 许可
-
-MIT License

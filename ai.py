@@ -3,7 +3,6 @@ AI 分析层：调用本地 Ollama 模型分析数据和市场
 """
 import requests
 import json
-from strategies_db import get_strategies, get_strategy_signals
 
 
 OLLAMA_URL = "http://localhost:11434/api/generate"
@@ -68,37 +67,6 @@ def build_market_prompt(market_report: dict) -> str:
     return text
 
 
-def build_strategy_context() -> str:
-    """从策略数据库读取可用策略，生成 AI 可读的上下文"""
-    strategies = get_strategies()
-    if not strategies:
-        return ""
-
-    lines = ["", "--- 可用量化策略库 ---"]
-
-    # 按类型分组
-    by_type = {}
-    for s in strategies:
-        by_type.setdefault(s["type"], []).append(s)
-
-    for typ, items in by_type.items():
-        lines.append(f"\n[{typ}]")
-        for s in items:
-            lines.append(f"  - {s['name']}: {s['description'][:80]}")
-            if s.get("source") and s["source"] != "通用策略":
-                lines[-1] += f" (来源: {s['source']})"
-
-    # 最近信号
-    signals = get_strategy_signals(limit=10)
-    if signals:
-        lines.append(f"\n[最近策略信号]")
-        for sig in signals[:5]:
-            lines.append(f"  {sig['date']} {sig['strategy_name']} → {sig['code']}: {sig['signal']} (评分{sig['score']})")
-
-    lines.append("\n请结合以上策略库中的方法，在分析中引用适用的策略逻辑。")
-    return "\n".join(lines)
-
-
 def build_portfolio_prompt(portfolio_summary: dict, market_report: dict) -> str:
     """生成持仓分析提示"""
     # 基金持仓文本
@@ -125,7 +93,7 @@ def build_portfolio_prompt(portfolio_summary: dict, market_report: dict) -> str:
 {index_text}
 
 ETF：
-{etf_text}{build_strategy_context()}
+{etf_text}
 
 请分析：
 1. 今日组合整体表现如何
@@ -139,19 +107,4 @@ ETF：
     return prompt
 
 
-def build_analysis_prompt(signal_summary: str = "") -> str:
-    """生成纯策略分析提示（不依赖持仓/市场）"""
-    context = build_strategy_context()
-    prompt = f"""你是一个量化策略分析师。{context}
 
-当前ETF轮动信号：{signal_summary or "暂无"}
-
-请分析：
-1. 当前市场适合哪种类型的策略（趋势跟踪/轮动/技术指标）
-2. 量化策略库中有哪些策略适应当前行情
-3. 是否出现多策略共振信号
-4. 建议重点关注的方向
-
-要求：200字以内。
-"""
-    return prompt

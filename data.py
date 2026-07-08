@@ -2,10 +2,15 @@
 数据层：AKShare 数据获取 + 本地 CSV 缓存
 """
 import os
+import threading
 import pandas as pd
 import akshare as ak
 from datetime import datetime, timedelta
 from config import FUNDS, ETF_WATCHLIST
+
+# py_mini_racer (used by parts of AKShare) is not safe to initialize/use from
+# multiple Python threads on Windows. All AKShare calls share this process lock.
+AKSHARE_LOCK = threading.RLock()
 
 # ── 代理绕过 ──
 # 东方财富 API 被代理拦截时，设置 no_proxy
@@ -25,6 +30,83 @@ CACHE_EXPIRE_HOURS = 6  # 净值一天只更新一次，6小时缓存足够
 FORCE_CACHE = False  # True = 跳过所有 API 请求，只读本地缓存
 
 
+# ═══════════════════════════════════════════
+#  DataProvider — 三级降级数据源
+# ═══════════════════════════════════════════
+
+class DataProvider:
+    """统一数据提供者：akshare → 新浪 → 本地缓存 逐级降级
+
+    用法:
+        dp = DataProvider()
+        df = dp.get_fund_nav("014319", days=60)
+    """
+
+    def __init__(self):
+        self.source_used = "unknown"
+        self.errors = []
+
+    def get_fund_nav(self, code: str, days: int = 60) -> pd.DataFrame:
+        """基金净值: akshare → 缓存"""
+        self.errors = []
+        # 1. akshare
+        try:
+            df = get_fund_nav(code, days=days, use_cache=False)
+            if df is not None and not df.empty:
+                self.source_used = "akshare"
+                return df
+        except Exception as e:
+            self.errors.append(f"akshare: {e}")
+
+        # 2. 本地缓存
+        self.source_used = "cache"
+        return get_fund_nav(code, days=days, use_cache=True)
+
+    def get_etf_daily(self, code: str, days: int = 120) -> pd.DataFrame:
+        """ETF日线: 新浪 → 东方财富 → 缓存"""
+        self.errors = []
+        # 1. 新浪
+        try:
+            df = _fetch_etf_sina(code, days)
+            if df is not None and not df.empty:
+                self.source_used = "sina"
+                return df.tail(days).reset_index(drop=True)
+        except Exception as e:
+            self.errors.append(f"sina: {e}")
+
+        # 2. 东方财富
+        try:
+            df = get_etf_daily(code, days=days, use_cache=False)
+            if df is not None and not df.empty:
+                self.source_used = "eastmoney"
+                return df
+        except Exception as e:
+            self.errors.append(f"eastmoney: {e}")
+
+        # 3. 缓存
+        self.source_used = "cache"
+        return get_etf_daily(code, days=days, use_cache=True)
+
+    def get_stock_daily(self, code: str, days: int = 120) -> pd.DataFrame | None:
+        """个股日K线: akshare → 缓存"""
+        from data import get_stock_daily as _get_stock_daily
+        self.errors = []
+        try:
+            df = _get_stock_daily(code, days=days)
+            if df is not None and not df.empty:
+                self.source_used = "akshare"
+                return df
+        except Exception as e:
+            self.errors.append(f"akshare: {e}")
+
+        self.source_used = "cache"
+        return _get_stock_daily(code, days=days)
+
+    @property
+    def healthy(self) -> bool:
+        return self.source_used != "cache" or len(self.errors) == 0
+
+
 def get_cache_mtime(code: str = None) -> str:
     """获取最新缓存时间，用于界面显示"""
     import glob
@@ -36,9 +118,6 @@ def get_cache_mtime(code: str = None) -> str:
         if latest is None or mtime > latest:
             latest = mtime
     return latest.strftime("%m-%d %H:%M") if latest else "暂无"
-
-# ── 缓存模式开关（由 Dashboard 侧栏控制）──
-FORCE_CACHE = False  # True = 跳过所有 API 请求，只读本地缓存
 
 # ── 基金净值 ──
 
@@ -58,7 +137,8 @@ def get_fund_nav(code: str, days: int = 60, use_cache: bool = True) -> pd.DataFr
             return df.tail(days).reset_index(drop=True)
 
     try:
-        df = ak.fund_open_fund_info_em(symbol=code)
+        with AKSHARE_LOCK:
+            df = ak.fund_open_fund_info_em(symbol=code)
         df = df.rename(columns={
             "净值日期": "净值日期",
             "单位净值": "单位净值",
@@ -121,12 +201,13 @@ def get_etf_daily(code: str, days: int = 120, use_cache: bool = True) -> pd.Data
 
     # 备选：东方财富 API
     try:
-        df = ak.fund_etf_hist_em(
-            symbol=code, period="daily",
-            start_date=(datetime.now() - timedelta(days=days + 30)).strftime("%Y%m%d"),
-            end_date=datetime.now().strftime("%Y%m%d"),
-            adjust="qfq",
-        )
+        with AKSHARE_LOCK:
+            df = ak.fund_etf_hist_em(
+                symbol=code, period="daily",
+                start_date=(datetime.now() - timedelta(days=days + 30)).strftime("%Y%m%d"),
+                end_date=datetime.now().strftime("%Y%m%d"),
+                adjust="qfq",
+            )
         if not df.empty:
             df = df.rename(columns={"日期": "日期", "开盘": "open", "最高": "high",
                                      "最低": "low", "收盘": "close", "成交量": "volume"})
@@ -193,7 +274,8 @@ def get_all_etfs(days: int = 120) -> dict:
 def get_index_data() -> pd.DataFrame:
     """获取主要指数实时行情"""
     try:
-        return ak.stock_zh_index_spot_em()
+        with AKSHARE_LOCK:
+            return ak.stock_zh_index_spot_em()
     except Exception as e:
         print(f"  [错误] 指数数据拉取失败: {e}")
         return pd.DataFrame()
@@ -204,7 +286,8 @@ def get_index_data() -> pd.DataFrame:
 def get_north_flow() -> pd.DataFrame:
     """北向资金流向"""
     try:
-        df = ak.stock_hsgt_north_net_flow_in_em(symbol="北上")
+        with AKSHARE_LOCK:
+            df = ak.stock_hsgt_north_net_flow_in_em(symbol="北上")
         return df.tail(20)
     except Exception as e:
         print(f"  [错误] 北向资金拉取失败: {e}")
@@ -238,13 +321,14 @@ def get_stock_daily(code: str, days: int = 120) -> pd.DataFrame | None:
     try:
         end_date = datetime.now().strftime("%Y%m%d")
         start_date = (datetime.now() - timedelta(days=days + 30)).strftime("%Y%m%d")
-        df = ak.stock_zh_a_hist(
-            symbol=code,
-            period="daily",
-            start_date=start_date,
-            end_date=end_date,
-            adjust="qfq",
-        )
+        with AKSHARE_LOCK:
+            df = ak.stock_zh_a_hist(
+                symbol=code,
+                period="daily",
+                start_date=start_date,
+                end_date=end_date,
+                adjust="qfq",
+            )
         if df is None or df.empty:
             return None
 
