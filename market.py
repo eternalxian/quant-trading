@@ -3,7 +3,7 @@
 """
 import pandas as pd
 from datetime import datetime
-from data import get_all_etfs, get_north_flow
+from data import AKSHARE_LOCK, get_all_etfs, get_north_flow
 from config import ETF_WATCHLIST
 
 
@@ -19,7 +19,8 @@ def scan_market() -> dict:
     # ── 指数实时行情 ──
     try:
         import akshare as ak
-        idx_df = ak.stock_zh_index_spot_sina()
+        with AKSHARE_LOCK:
+            idx_df = ak.stock_zh_index_spot_sina()
         target_names = ["上证指数", "深证成指", "创业板指", "科创50"]
         for _, row in idx_df.iterrows():
             name = str(row.iloc[1])  # 名称
@@ -35,7 +36,8 @@ def scan_market() -> dict:
     # ── ETF 实时行情 ──
     try:
         import akshare as ak
-        etf_spot = ak.fund_etf_spot_em()
+        with AKSHARE_LOCK:
+            etf_spot = ak.fund_etf_spot_em()
         if not etf_spot.empty:
             for code, name in ETF_WATCHLIST.items():
                 match = etf_spot[etf_spot["代码"] == code]
@@ -53,7 +55,8 @@ def scan_market() -> dict:
     # ── 北向资金 ──
     try:
         import akshare as ak
-        nf = ak.stock_hsgt_north_net_flow_in_em(symbol="北上")
+        with AKSHARE_LOCK:
+            nf = ak.stock_hsgt_north_net_flow_in_em(symbol="北上")
         if not nf.empty:
             latest = nf.iloc[-1]
             val = latest.get("value", latest.iloc[-1]) if hasattr(latest, 'get') else latest.iloc[-1]

@@ -2,7 +2,7 @@
 
 import {
   LayoutDashboard, TrendingUp, BarChart3, PieChart,
-  Shield, Zap, Globe, Brain, Calendar, Activity,
+  Shield, Zap, Globe, Brain, Calendar, Activity, Target,
   Settings, Bell, ChevronRight, type LucideIcon,
 } from "lucide-react";
 import { useState } from "react";
@@ -17,15 +17,11 @@ interface NavItem {
 const navItems: NavItem[] = [
   { icon: LayoutDashboard, label: "概览", active: true },
   { icon: TrendingUp, label: "市场", badge: "LIVE" },
-  { icon: BarChart3, label: "持仓", badge: "9" },
-  { icon: PieChart, label: "行业" },
+  { icon: BarChart3, label: "持仓", badge: "6" },
   { icon: Shield, label: "风险" },
-  { icon: Zap, label: "信号", badge: "BUY" },
-  { icon: Globe, label: "个股" },
+  { icon: Target, label: "决策中心", badge: "NEW" },
   { icon: Brain, label: "AI" },
-  { icon: Calendar, label: "日报" },
-  { icon: TrendingUp, label: "优化" },
-  { icon: Activity, label: "健康" },
+  { icon: Activity, label: "交易记录" },
 ];
 
 interface Props {

@@ -1,8 +1,26 @@
-node_modules/
-.next/
 __pycache__/
-*.db
-*.csv
-*.joblib
-*.pt
+*.py[cod]
+.venv/
+venv/
 .env
+logs/
+backups/
+.reasonix/
+.next/
+node_modules/
+terminal/.next/
+terminal/node_modules/
+terminal/tsconfig.tsbuildinfo
+
+# Never publish personal portfolio data.
+data/*.db
+data/*.db-*
+data/*.sqlite*
+data/quant_backup_*
+data/nav_*.csv
+
+# The repository keeps only explicitly force-added synthetic demo fixtures.
+!data/README.md
+!data/demo-*.db
+!data/demo-nav-*.csv
+
